@@ -1,309 +1,301 @@
 import pandas as pd
 import numpy as np
-from scipy.stats import ttest_rel
-
-import string
-import re
-import os
-script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
-rel_path1 = "bball/confdata.txt"
-abs_file_path1 = os.path.join(script_dir, rel_path1)
-rel_path2 = "bball/dancedata.txt"
-abs_file_path2 = os.path.join(script_dir, rel_path2)
-rel_path3 = "bball/descreptest.txt"
-abs_file_path3 = os.path.join(script_dir, rel_path3)
-rel_path4 = "bball/alldancedata.txt"
-abs_file_path4 = os.path.join(script_dir, rel_path4)
-
-
-#open file as text, stick each line into a list
-#create list "test" to test with
-conftxt = open(abs_file_path1, "r")
-conflines = conftxt.readlines()
-dancetxt = open(abs_file_path2, "r")
-dancelines = dancetxt.readlines()
-allconftxt = open(abs_file_path3, "r")
-allconflines = allconftxt.readlines()
-alldancetxt = open(abs_file_path4, "r")
-alldancelines = alldancetxt.readlines()
-#data = pd.DataFrame(lines)
-#test = data.ix[0:13,:]
-#print test
-
-#split lines into individual data units: team, conf, year, result; turn string numbers into digits
-
-def units(lines):
-    nums = {}
-    for x in range(0,17):
-        nums[str(x)] = str(x)
-    for line in lines:
-        index = lines.index(line)
-        #for key in nums.keys():
-        #    line = re.sub(r'\b%s\b'%(key), '"%s"'%(nums[key]), line)
-        line = line.split(r'"')
-        lines[index] = line
-    return lines
-    
-conflines = units(conflines)
-dancelines = units(dancelines)
-allconflines = units(allconflines)
-alldancelines = units(alldancelines)
-
-#remove data units that aren't data (ie, the punctuation units)
-def rem_punct(line):
-    for word in line:
-        if re.search(r'\w', word) == None:
-            index = line.index(word)
-            del line[index]
-        word = re.sub(r'\b,\b', '', word)
-        word = re.sub(r'^:\b', '', word)
-    return line
-    
-conflines = map(lambda x: rem_punct(x), conflines)
-dancelines = map(lambda x: rem_punct(x), dancelines)
-allconflines = map(lambda x: rem_punct(x), allconflines)
-alldancelines = map(lambda x: rem_punct(x), alldancelines)
-
-conflines = map(lambda x: rem_punct(x), conflines)
-dancelines = map(lambda x: rem_punct(x), dancelines)
-allconflines = map(lambda x: rem_punct(x), allconflines)
-alldancelines = map(lambda x: rem_punct(x), alldancelines)
-
-#print allconflines[0:6]
-test = alldancelines[0:6]
-
-#turn the string(which looks liks "item: value, item: value") into a dictionary
-def str2dict(collection):
-    dictlist = []
-    for line in collection:
-        if len(line)>3:
-            dictionary = {}
-            dictionary[line.pop(0)] = line.pop(1)
-            dictionary[line.pop(0)] = line.pop(1)
-            dictionary[line.pop(0)] = line.pop(1)
-            dictionary[line.pop(0)] = line.pop(1)
-            dictlist.append(dictionary)
-    return dictlist
-    
-def str2dict2(collection):
-    dictlist = []
-    for line in collection:
-        if len(line)>5:
-            dictionary = {}
-            for x in range(0, len(line)-1, 2):
-                dictionary[line[x]] = line[x+1]
-            dictlist.append(dictionary)
-        return dictlist
-        
-def dancelines2dict(collection):
-    dictlist = []
-    for line in collection:
-        if len(line)>5:
-            dictionary = {}
-            for x in range(0, len(line)-1, 2):
-                dictionary[line[x]] = line[x+1]
-            dictlist.append(dictionary)
-    return dictlist
-        
-conflines = str2dict(conflines)
-dancelines = str2dict(dancelines)
-allconflines = dancelines2dict(allconflines)
-alldancelines = dancelines2dict(alldancelines)
-
-
-
-
-#dataframe that shit
-confdata = pd.DataFrame(conflines)
-dancedata = pd.DataFrame(dancelines)
-allconfdata = pd.DataFrame(allconflines)
-alldancedata = pd.DataFrame(alldancelines)
-
-#print confdata.info()
-#print dancedata.info()
-#print allconfdata.info()
-#print alldancedata.head()
-
-#print allconfdata.head()
-
-#fixing the results column in conf and dance frames (currently ": 'data', ")
-numresult = confdata.iloc[:, 1]
-confdata.iloc[:, 1] = [x[2] for x in numresult]
-numresult = dancedata.iloc[:, 1]
-dancedata.iloc[:, 1] = [x[2] for x in numresult]
-numresult = allconfdata.iloc[:, 2]
-allconfdata.iloc[:, 2] = [x[2] for x in numresult]
-numresult = alldancedata.iloc[:, 1]
-alldancedata.iloc[:, 1] = [x[2] for x in numresult]
-
-#sorting by conference, team, year
-confdata = confdata.sort(["conf", "year", "team"])
-dancedata = dancedata.sort(["myear", "mteam"])
-allconfdata = allconfdata.sort(["conf", "year", "team"])
-alldancedata = alldancedata.sort(["myear", "mteam"])
-
-
-
-
-#print confdata.head(20)
-#print confdata.tail(20)
-#print dancedata.head(20)
-#print dancedata.tail(20)
-#print confdata.info
-#print dancedata.info
-
-
-#print conftdata.info()
-#print conftdata.iloc[13:30, :]
-#print dancetdata.info()
-#print dancetdata.iloc[114:116, :]
-
-
-#merging the conference and march madness data; outer join keeps rows in one dataframe that don't have values in the other
-testdata = pd.merge(confdata, dancedata, how = "outer", on = None, left_on = ("year", "team"), right_on = ("myear", "mteam"), left_index = False, right_index = False)
-
-alltestdata = pd.merge(allconfdata, alldancedata, how = "outer", on = None, left_on = ("year", "team"), right_on = ("myear", "mteam"), left_index = False, right_index = False)
-
-#print alltestdata.head()
-#print testdata.head()
-#print alltestdata.info()
-
-
-#reordering columns so that the two team and year columns are by each other
-testdata = testdata[["conf", "result", "team", "mteam", "year", "myear", "mrank", "mresult"]]
-
-alltestdata = alltestdata[["conf", "regchamp", "tournchamp", "result", "mrank", "mresult", "team", "year", "mteam", "myear"]]
-
-#alltestdata.loc[:, "mresult"] = map(lambda x: int(x), alltestdata.loc[:, "mresult"])
-
-#sorting by regchamps / nonreg champs
-
-alltestdata = alltestdata.sort(["regchamp", "tournchamp"])
-
-#print alltestdata.describe()
-
-test = alltestdata
-
-#test.index = range(0, len(test))
-
-#print test.tail()
-
-#print alltestdata.head()
-#print test.describe()
-
-#print test.unique
-
-#test.ix[:, "mresult"] = test.ix[:, "mresult"].dropna()
-
-#print test.describe()
-
-#print test.describe()
-
-#print test.ix[49,:]
-
-change = ["result", "mrank", "mresult"]
-
-for x in change:
-    test.ix[:, x] = test.ix[:, x].astype(float)
-
-
-#print test.ix[:, "result"].mean()
-#print test.ix[:, "mrank"].mean()
-#print test.ix[:, "mresult"].mean()
-
-#print test.ix[:, "mresult"].mean()
-
-
-#testtournrank = test["mrank"].groupby(test["tournchamp"])
-
-#print testtourn.mean()
-
-#testtournresult = test["result"].groupby(test["regchamp"])
-
-#print testtournresult.mean()
-
-testtournmresult = test["mresult"].groupby([test["tournchamp"], test["regchamp"]])
-
-#print testtournmresult.describe() 
-
-#print testtournmresult.groups.keys()
-
-print testtournmresult.groups[("N", "N")]
-
-
-
-
-#f = lambda x: int(x)
-
-#tourngroup_dance = tourngroup["mresult"].apply(f)
-
-#print tourngroup
-
-#print tourngroup.agg([np.mean, np.std])
-#print tourngroup_dance.agg([np.mean, np.std])
-
-#print tourngroup["mresult"].agg([np.mean])
-
-#print tourngroup.aggregate(np.mean)
-
-#print testdata.ix[160:, 2:6]
-
-#print [testdata.ix[x, "myear"] != testdata.ix[x, "year"] for x in range(0,171)] 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#KEEEP THISSSSSS!!!!!!!!!creating list for big dance url scraping
-def teamyearurl(teamlist, yearlist):
-    list = []
-    #creating list; appending "19" or "20" to last two digits of year
-    for num in range(len(teamlist)):
-        list.append([teamlist[num], yearlist[num][5:7]])
-        if list[num][1] == "98" or list[num][1] == "99":
-            list[num][1] = re.sub(list[num][1], "19"+list[num][1], list[num][1])
-        else:
-            list[num][1] = re.sub(list[num][1], "20"+list[num][1], list[num][1])
-    return list
-    
-    
-    
-#NEED TO KEEP teamyear SO SPIDERS WILL WORK!!!!ONE!!!!1!!!!    
-teamyear = teamyearurl(allconfdata.ix[:,"team"], allconfdata.ix[:, "year"])
-
-#print confdata.head()
-
-print 
-
-#print dancedata.head()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-alldancetxt.close()
-allconftxt.close()
-conftxt.close()
-dancetxt.close()
+import json
+
+#get data
+with open('test.json') as data_file:
+	data = json.load(data_file)
+	
+df = pd.DataFrame(data)
+
+#remove N/A rows that were buffers in original data
+#what do those rows look like?
+#	'game number' serves as index per team per season, look at game number variable
+#		df['game number'].unique()
+#		all integers except for 'G'
+#	look at values for columns in rows that have 'G'
+#		for column in df.columns:
+#			len(df.ix[df['game number'] == 'G', column].unique())
+#		all have 1 value except for team 
+# 	so, restrict data frame to rows that don't have 'G' as game number
+
+df = df.ix[df['game number'] != 'G', :]
+
+#change home / away values to "home", "away" and "N" (neutral site)
+df.ix[df['home_away'] == '@', 'home_away'] = 'away'
+df.ix[df['home_away'] == 'N/A', 'home_away'] = 'home'
+
+#create conf column
+#BUT need to demarcate seasons by date before doing; currently grouped just by year, doesn't capture November to March grouping
+#SO change seasons to capture November to March grouping
+
+df.ix[:, 'Month'] = df.date.map(lambda x: x[5:8])
+df.season = df.season.astype(int)
+df.season = df.season - df.Month.map({	'Jan': 1,
+                                        'Feb': 1,
+ 										'Mar': 1, 
+										'Apr': 1,
+										'Nov': 0,
+										'Dec': 0})
+
+#That's done, so now create conference column with fast pandaized method
+grouped = df.groupby(['team', 'season'])['conf_opp'].value_counts()
+
+conference = pd.DataFrame(grouped)
+conference.columns = ['value count']
+		
+conference = conference.reset_index()
+conference['count max'] = conference.groupby(['team', 'season'])['value count'].transform(max)
+conference['marker'] = np.sign(conference['value count'] - conference['count max'])
+
+conference = conference.ix[conference['marker'] == 0, :]
+
+conference = conference.ix[:,['team', 'season', 'conf_opp']]
+
+conference.columns = ['team', 'season', 'conf']
+
+#check to see if this "get max opp conf and set conf to that value" method results in dupes:
+#conference.loc[:, 'duplicated'] = conference.duplicated(subset = ['team', 'season'], keep = False)
+
+#if so and they're just a few dumb teams:
+#conference = conference.loc[conference['duplicated'] == False, :]
+#conference = conference.drop('duplicated', 1)
+
+conf_df = pd.merge(df, conference, how = 'inner', on = ['team', 'season'])
+
+#add 'conf_game' marker column
+
+conf_df.loc[:, 'conf_game'] = conf_df.apply(lambda x: 1 if x['conf_opp'] == x['conf'] else 0, axis = 0)
+
+#create streak columns
+#change game number to int
+
+conf_df.loc[:, 'game number'] = conf_df['game number'].astype(int)
+
+#initialize streaks with first game
+conf_df.loc[conf_df['game number'] == 0, 'losing_streak_pre_game'] = 0
+conf_df.loc[conf_df['game number'] == 0, 'winning_streak_pre_game'] = 0
+
+#create a bunch of frames by team and season, sort by game number
+#Needs "won_game" column
+conf_df.loc[:, 'won_game'] = conf_df.w_l.map({'W':1, 'L':0})
+
+#split up into frames by team and season
+frame_list = []
+for team in conf_df.team.unique():
+	for season in conf_df.loc[conf_df['team'] == team, 'season'].unique():
+		frame = conf_df.loc[(conf_df['team'] == team) & (conf_df['season'] == season), :]
+		frame = frame.sort_values(['game number'], ascending == True)
+		frame_list.append(frame)
+
+#'winning streak generation' function (note: this is the winning streak before the game is played, so the value for the first game is 0, value for the second game is the result of the first game, etc) 
+def win_streak_column(row, frame):
+	if frame.loc[row, 'game number'] < 2:
+		return 0
+	if frame.loc[row-1, 'won_game'] == 0:
+		return 0
+	
+	team_var = frame.loc[row, 'team']
+	season_var = frame.loc[row, 'season']
+	
+	first_game_index = frame.index[(frame.team == team_var) & (frame.season == season_var) & (frame['game number'] == 1)].tolist()[0]
+	
+	start_idx = frame['won_game'].loc[first_game_index:row-1][frame['won_game'] == 0].last_valid_index()
+	
+	if type(start_idx) == None.__class__:
+		start_idx = first_game_index - 1
+	
+	return i - 1 - start_idx
+	
+def losing_streak_column(frame, row):
+	if frame.loc[row, 'game number'] < 2:
+		return 0
+	if frame.loc[row - 1, 'won_game'] == 1:
+		return 0
+		
+	team_var = frame.loc[row, 'team']
+	season_var = frame.loc[row, 'season']
+	
+	first_game_index = frame.index[(frame.team == team_var) & (frame.season == season_var) & (frame['game number'] == 1)].tolist()[0]
+	
+	start_idx = frame['won game'].loc[first_game_index:row-1][frame['won_game'] == 1.last_valid_index()
+	
+	if type(start_idx) == None.__class__:
+		start_idx = first_game_index - 1
+		
+	return row - 1 - start_idx	
+	
+#create column in each frame
+hold_list = []
+for frame in frame_list:
+	frame.loc[:, 'winning_streak_pre_game'] = frame.index.to_series().map(lambda i: win_streak_column(i, frame))
+	hold_list.append(frame)
+
+frame_list = hold_list
+
+ff = pd.concat(frame_list)
+
+#alt code to get win / losing streaks on big frame row by row
+# for row in ddtest.index:
+#      ...:     game = ddtest.loc[row, 'game number']
+#      ...:     if game >1:
+#      ...:         prev_game = ddtest[ddtest['game number'] == game - 1].index.tolist()[0]
+#      ...:         prev_win_streak = ddtest.loc[prev_game, 'winning_streak_pre_game']
+#      ...:         prev_lose_streak = ddtest.loc[prev_game, 'losing_streak_pre_game']   
+#      ...:         if ddtest.loc[prev_game, 'w_l'] == 'W':
+#      ...:             ddtest.loc[row, 'winning_streak_pre_game'] = prev_win_streak + 1
+#      ...:             ddtest.loc[row, 'losing_streak_pre_game'] = 0
+#      ...:         if ddtest.loc[prev_game, 'w_l'] == 'L':
+#      ...:             ddtest.loc[row, 'losing_streak_pre_game'] = prev_lose_streak + 1
+#      ...:             ddtest.loc[row, 'winning_streak_pre_game'] = 0
+
+
+
+#rejigger some variables
+
+#convert ot to numeric
+
+ff.loc[:, 'ot'] = ff.ot.map({'N/A': 0, 'OT':1, '2OT': 2, '3OT': 3, '4OT':4, '5OT':5, '6OT':6})
+
+#convert pts and opp_pts to int
+#create pts_diff variable
+#if haven't gone back to grab 2017 season data, the above pts code needs to have ff.loc[ff.pts != 'N/A', 'pts'] etc. throughout
+ff['pts'] = ff['pts'].astype(int)
+ff['opp_pts'] = ff['opp_pts'].astype(int)
+ff['pts_diff'] = f['pts'] - f['opp_pts']
+
+#w/l variables
+#wins pre_game
+
+def w_pregame(frame, row):
+	if frame.loc[row, 'game number'] == 1:
+		return 0
+		
+	team_var = frame.loc[row, 'team']
+	season_var = frame.loc[row, 'season']
+	
+	first_game_index = frame.index[(frame.team == team_var) & (frame.season == season_var) & (frame['game number'] == 1)].tolist()[0]
+	
+	return frame.loc[first_game_index:row-1, 'won_game'].sum()
+		
+#won previous game
+def won_prev_game_col(frame, row):
+	if frame.loc[row, 'game number'] == 1:
+		return np.nan
+	return frame.loc[row-1, 'won_game']
+
+#w/l avg pregame, entire season
+def w_avg_pregame_season(frame, row):
+	if frame.loc[row, 'game number'] == 1:
+		return 0
+	
+	prev_game_number = frame.loc[row-1, 'game number']
+	
+	return (frame.loc[row, 'w_pregame']) / prev_game_number
+		
+#w/l avg pregame, over last 5 games
+def w_avg_pregame_5gms(frame, row):
+	return pd.rolling_mean(frame.won_prev_game, 5, min_periods = 1)
+	
+#pts previous game
+def pts_prev_game_col(frame, row):
+	if frame.loc[row, 'game number'] == 1:
+		return np.nan
+	return framee.loc[row-1, 'pts']
+	
+#avg pts, season
+def avg_pts_pregame_sn(frame, row):
+	if frame.loc[row, 'game number'] == 1:
+		return np.nan
+		
+	team_var = frame.loc[row, 'team']
+	season_var = frame.loc[row, 'season']
+	
+	first_game_index = frame.index[(frame.team == team) & (frame.season == season_var) & (frame['game number'] == 1)].tolist()[0]
+	
+	return frame.loc[first_game_index:row-1, 'pts'].sum() / frame.loc[row-1, 'game number']
+	
+#avg pts previous 5 games
+def avg_pts_pregame_5gms(frame, row):
+	return pd.rolling_mean(frame.pts_pregame, 5, min_periods = 1)
+	
+	
+#Including opponents stats from recent games
+#Cleaning up team names so can cross-reference team names and dates
+def rename_team(frame, team_var):
+	t = team_var
+	f = frame
+	f = f.loc[f['team'] == t, :]
+	
+	opponent_date = f.loc[0, ['opponent', 'date']].tolist()
+	
+	new_name = f.loc[(f.team == opponent_date[0]) & (f.date == opponent_date[1]), 'opponent'].tolist()
+	
+	if len(new_name) == 1:
+		return new_name[0]
+		
+	else:
+		
+		opponent = f.loc[f['team'].isin(f.loc[f['team'] == t, 'opponent'].unique().tolist()), 'team'].value_counts().index.tolist()[0]
+		
+		date = f.loc[(f['team'] == t) & (f.opponent == f.loc[f['team'].isin(f.loc[f['team'] == t, 'opponent'].unique().tolist()), 'team'].value_counts().index.tolist()[0]), 'date'].tolist()[0]
+		
+		try:
+			new_name = f.loc[(f.team == opponent) & (f.date == date), 'opponent'].tolist()[0]
+			return new_name
+			
+		except IndexError:
+			return team
+			
+#to implement the above:
+#team_to_replace = dd.loc[~dd.team.isin(dd.opponent.unique().tolist()), 'team'].unique().tolist()
+#rename_team_dict = {}
+#for team in team_to_replace:
+#	rename_team_dict[team] = rename_team(dd, team)
+#	dd.team = dd.team.replace(rename_team_dict)
+	
+#compare In [1304] and In [1386] for the right opp_pts_prevgame function
+# In [1304]
+temp = dd.groupby(['team', 'season'])
+def opp_pts_prevgame(row):
+	a = dd.loc[temp.groups[(dd.opponent[row], dd.season[row])]]
+	frame = a[a.shift(-1)['date'] == dd.date[row]]
+	
+	if len(frame) == 0:
+		return np.nan
+	else:
+		return frame['pts'].tolist()[0]
+		
+#In [1386]
+temp = dd.groupby(['team', 'season'])
+def opp_pts_prevgame(row):
+	try:
+		a = dd.loc[temp.groups[(dd.opponent[row], dd.season[row])]]
+		frame = a[a.shift(-1)['date'] == dd.date[row]]
+	
+		if len(frame) == 0:
+			return np.nan
+		else:
+			return frame['pts'].tolist()[0]
+	
+	except KeyError:
+		return np.nan
+
+#get dummy variables for home_away, conf, conf_opp, type, Month
+f_concat = pd.get_dummies(ff, columns = ['home_away', 'conf', 'conf_opp', 'type', 'Month'])
+
+#create a merge frame by dropping non_key and non_merge columns
+f_concat = f_concat.drop(['opponent', 'conf_game', 'winning_streak_pre_game_fast', 'pts', 'opp_pts', 'ot', 'wins', 'losses', 'won_game', 'pts_diff'], axis = 1)
+
+#merge that mo so that main frame has dummy variables and original columns too
+ff = pd.merge(ff, f_concat, how = 'inner', on = ['team', 'season', 'game_number', 'date'])
+
+
+
+
+
+test = test[['team', 'season', 'season_fix', 'season_test', 'game number', 'date', 'Month', 'opponent', 'conf_game', 'home_away', 'home', 'wins_post_game', 'winning_streak', 'losses_post_game', 'losing_streak', 'w_l', 'game_won', 'pts', 'opp_pts', 'pts_diff', 'ot', 'type', 
+
+
+
+		

@@ -1,0 +1,75 @@
+import scrapy
+
+class SeasonSpider(scrapy.Spider):
+	name = "season"
+	
+	custom_settings = {'DOWNLOAD_DELAY' : 1.5}
+	
+	start_urls = [
+			'https://www.sports-reference.com/cbb/schools/'
+			]
+			
+	def parse(self, response):
+		schools = response.xpath('//table[@id = "schools"]//tbody//tr')
+		for school in schools:
+			school_page = school.xpath('.//td[@data-stat = "school_name"]/a/@href').extract_first()
+			if type(school_page) != str:
+				print('Attempted to grab a school, came back empty')
+				continue
+				
+			yield response.follow('https://www.sports-reference.com'+school_page, self.parse_school_page)
+			
+				
+	def parse_school_page(self, response):
+		seasons = response.xpath('//tbody//tr') 
+		for season in seasons:
+
+			year = season.xpath('.//td[@data-stat = "season"]/a/text()').extract_first()
+			
+			if int(year[0:4])<1990:
+				print('Year below 1990')
+				continue 
+
+			season_page = season.xpath('.//td[@data-stat = "season"]/a/@href').extract_first()
+			if type(season_page) != str:
+				print('Attempted to grab a season, came back empty')
+				continue
+			
+			yield response.follow('https://www.sports-reference.com'+season_page, self.parse_season_page)
+			
+			
+	def parse_season_page(self, response):
+		schedule_page = response.xpath('//li[@data-fade-selector = "#inpage_nav"]').xpath('.//li')[1].xpath('a/@href').extract_first()
+		
+		yield response.follow('https://www.sports-reference.com'+schedule_page, self.parse_schedule)
+			
+	def parse_schedule(self, response):
+		games = response.xpath('//tbody//tr')
+		
+		team_name_raw = response.xpath('//li[@data-fade-selector = "#inpage_nav"]//span/text()').extract_first()
+		
+		team_name = ' '.join(team_name_raw.split()[2:-1])
+		
+		def data_parse(path, variable):
+			return  path.xpath('.//td[@data-stat = {}]//text()'.format(variable)).extract_first(default = "N/A")
+		
+		for game in games:
+			
+			yield {
+				'team' : team_name,
+				'season' : data_parse(game, '"date_game"')[-4:],
+				'game number' : game.xpath('.//th/text()').extract_first(),
+				'date' : data_parse(game, '"date_game"'),
+ 				'type' : data_parse(game, '"game_type"'),
+ 				'home_away' : data_parse(game, '"game_location"'),
+ 				'opponent' : data_parse(game, '"opp_name"'),
+ 				'conf_opp' : data_parse(game, '"conf_abbr"'),
+ 				'w_l' : data_parse(game, '"game_result"'),
+ 				'pts' : data_parse(game, '"pts"'),
+ 				'opp_pts' : data_parse(game, '"opp_pts"'),
+ 				'ot' : data_parse(game, '"overtimes"'),
+ 				'wins' : data_parse(game, '"wins"'),
+ 				'losses' : data_parse(game, '"losses"'),
+ 				'current_streak' : data_parse(game, '"game_streak"')
+ 				
+ 				}

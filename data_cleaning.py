@@ -22,8 +22,8 @@ df = pd.DataFrame(data)
 df = df.ix[df['game number'] != 'G', :]
 
 #change home / away values to "home", "away" and "N" (neutral site)
-df.ix[df['home_away'] == '@', 'home_away'] = 'away'
-df.ix[df['home_away'] == 'N/A', 'home_away'] = 'home'
+df.loc[df['home_away'] == '@', 'home_away'] = 'away'
+df.loc[df['home_away'] == 'N/A', 'home_away'] = 'home'
 
 #create conf column
 #BUT need to demarcate seasons by date before doing; currently grouped just by year, doesn't capture November to March grouping
@@ -33,10 +33,10 @@ df.ix[:, 'Month'] = df.date.map(lambda x: x[5:8])
 df.season = df.season.astype(int)
 df.season = df.season - df.Month.map({	'Jan': 1,
                                         'Feb': 1,
- 										'Mar': 1, 
-										'Apr': 1,
-										'Nov': 0,
-										'Dec': 0})
+ 					'Mar': 1, 
+					'Apr': 1,
+					'Nov': 0,
+					'Dec': 0})
 
 #That's done, so now create conference column with fast pandaized method
 grouped = df.groupby(['team', 'season'])['conf_opp'].value_counts()
@@ -134,21 +134,6 @@ for frame in frame_list:
 frame_list = hold_list
 
 ff = pd.concat(frame_list)
-
-#alt code to get win / losing streaks on big frame row by row
-# for row in ddtest.index:
-#      ...:     game = ddtest.loc[row, 'game number']
-#      ...:     if game >1:
-#      ...:         prev_game = ddtest[ddtest['game number'] == game - 1].index.tolist()[0]
-#      ...:         prev_win_streak = ddtest.loc[prev_game, 'winning_streak_pre_game']
-#      ...:         prev_lose_streak = ddtest.loc[prev_game, 'losing_streak_pre_game']   
-#      ...:         if ddtest.loc[prev_game, 'w_l'] == 'W':
-#      ...:             ddtest.loc[row, 'winning_streak_pre_game'] = prev_win_streak + 1
-#      ...:             ddtest.loc[row, 'losing_streak_pre_game'] = 0
-#      ...:         if ddtest.loc[prev_game, 'w_l'] == 'L':
-#      ...:             ddtest.loc[row, 'losing_streak_pre_game'] = prev_lose_streak + 1
-#      ...:             ddtest.loc[row, 'winning_streak_pre_game'] = 0
-
 
 
 #rejigger some variables
@@ -254,8 +239,7 @@ def rename_team(frame, team_var):
 #	rename_team_dict[team] = rename_team(dd, team)
 #	dd.team = dd.team.replace(rename_team_dict)
 	
-#compare In [1304] and In [1386] for the right opp_pts_prevgame function
-# In [1304]
+
 temp = dd.groupby(['team', 'season'])
 def opp_pts_prevgame(row):
 	a = dd.loc[temp.groups[(dd.opponent[row], dd.season[row])]]
@@ -266,20 +250,7 @@ def opp_pts_prevgame(row):
 	else:
 		return frame['pts'].tolist()[0]
 		
-#In [1386]
-temp = dd.groupby(['team', 'season'])
-def opp_pts_prevgame(row):
-	try:
-		a = dd.loc[temp.groups[(dd.opponent[row], dd.season[row])]]
-		frame = a[a.shift(-1)['date'] == dd.date[row]]
-	
-		if len(frame) == 0:
-			return np.nan
-		else:
-			return frame['pts'].tolist()[0]
-	
-	except KeyError:
-		return np.nan
+
 
 #get dummy variables for home_away, conf, conf_opp, type, Month
 f_concat = pd.get_dummies(ff, columns = ['home_away', 'conf', 'conf_opp', 'type', 'Month'])
@@ -289,9 +260,6 @@ f_concat = f_concat.drop(['opponent', 'conf_game', 'winning_streak_pre_game_fast
 
 #merge that mo so that main frame has dummy variables and original columns too
 ff = pd.merge(ff, f_concat, how = 'inner', on = ['team', 'season', 'game_number', 'date'])
-
-
-
 
 
 test = test[['team', 'season', 'season_fix', 'season_test', 'game number', 'date', 'Month', 'opponent', 'conf_game', 'home_away', 'home', 'wins_post_game', 'winning_streak', 'losses_post_game', 'losing_streak', 'w_l', 'game_won', 'pts', 'opp_pts', 'pts_diff', 'ot', 'type', 
